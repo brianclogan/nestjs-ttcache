@@ -1,5 +1,5 @@
 {
-  "name": "typeorm-ttcache",
+  "name": "nestjs-ttcache",
   "version": "1.0.0",
   "description": "Write-through cache implementation for TypeORM inspired by Square's TTCache",
   "main": "dist/index.js",

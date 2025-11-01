@@ -1,4 +1,4 @@
-# TypeORM TTCache
+# NestJS TTCache
 
 A write-through cache implementation for TypeORM inspired by Square's TTCache system. This package provides automatic caching for TypeORM entities with support for write-through and read-through caching patterns.
 
@@ -18,17 +18,17 @@ A write-through cache implementation for TypeORM inspired by Square's TTCache sy
 ## Installation
 
 ```bash
-npm install typeorm-ttcache
+npm install nestjs-ttcache
 # or
-yarn add typeorm-ttcache
+yarn add nestjs-ttcache
 ```
 
 ## Installation
 
 ```bash
-npm install typeorm-ttcache ioredis
+npm install nestjs-ttcache ioredis
 # or
-yarn add typeorm-ttcache ioredis
+yarn add nestjs-ttcache ioredis
 ```
 
 ## Quick Start
@@ -39,7 +39,7 @@ yarn add typeorm-ttcache ioredis
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import Redis from 'ioredis';
-import { TTCacheModule, RedisCacheProvider } from 'typeorm-ttcache';
+import { TTCacheModule, RedisCacheProvider } from 'nestjs-ttcache';
 
 @Module({
   imports: [
@@ -64,7 +64,7 @@ export class AppModule {}
 
 ```typescript
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
-import { CachedBaseEntity, CacheableEntity, CacheKey } from 'typeorm-ttcache';
+import { CachedBaseEntity, CacheableEntity, CacheKey } from 'nestjs-ttcache';
 
 @Entity()
 @CacheableEntity({
@@ -166,7 +166,7 @@ The `CachedBaseEntity` provides these cache-aware methods:
 ### Custom Cache Operations
 
 ```typescript
-import { TTCacheService, CacheKeyGenerator } from 'typeorm-ttcache';
+import { TTCacheService, CacheKeyGenerator } from 'nestjs-ttcache';
 
 @Injectable()
 export class UserService {
@@ -236,7 +236,7 @@ console.log(`Average load time: ${stats.averageLoadTime}ms`);
 
 ```typescript
 import Redis from 'ioredis';
-import { RedisCacheProvider } from 'typeorm-ttcache';
+import { RedisCacheProvider } from 'nestjs-ttcache';
 
 const redis = new Redis({
   host: 'localhost',
@@ -249,7 +249,7 @@ const provider = new RedisCacheProvider(redis);
 ### Memory Provider (for testing)
 
 ```typescript
-import { MemoryCacheProvider } from 'typeorm-ttcache';
+import { MemoryCacheProvider } from 'nestjs-ttcache';
 
 const provider = new MemoryCacheProvider();
 ```
@@ -276,7 +276,7 @@ const provider = new MemoryCacheProvider();
 The package includes testing utilities:
 
 ```typescript
-import { MemoryCacheProvider } from 'typeorm-ttcache';
+import { MemoryCacheProvider } from 'nestjs-ttcache';
 
 // Use in-memory cache for tests
 const testProvider = new MemoryCacheProvider();
