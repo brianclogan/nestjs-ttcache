@@ -1,13 +1,20 @@
 {
   "name": "nestjs-ttcache",
   "version": "1.0.0",
-  "description": "Write-through cache implementation for TypeORM inspired by Square's TTCache",
+  "description": "Write-through cache implementation for NestJS with TypeORM inspired by Square's TTCache",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "lint": "eslint src/**/*.ts"
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "jest --config jest.integration.config.js",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "benchmark": "node benchmarks/run.js",
+    "prepublishOnly": "npm run build && npm test",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -34,12 +41,13 @@
   },
   "private": false,
   "keywords": [
+    "nestjs",
     "typeorm",
     "cache",
     "ttcache",
     "write-through",
-    "nestjs",
-    "redis"
+    "redis",
+    "typescript"
   ],
   "author": "",
   "license": "MIT"

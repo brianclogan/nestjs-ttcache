@@ -1,0 +1,45 @@
+# Source files
+src/
+tests/
+benchmarks/
+examples/
+
+# Configuration files
+.github/
+.vscode/
+.idea/
+.qodo/
+*.config.js
+*.config.ts
+tsconfig.json
+.eslintrc.js
+.prettierrc
+
+# Development files
+docker-compose.yml
+CONTRIBUTING.md
+*.test.ts
+*.spec.ts
+*.integration.test.ts
+
+# Build artifacts
+*.tsbuildinfo
+coverage/
+.nyc_output/
+
+# Misc
+.DS_Store
+*.log
+.env
+.env.*
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Keep these
+!dist/
+!package.json
+!README.md
+!LICENSE
+!CHANGELOG.md
