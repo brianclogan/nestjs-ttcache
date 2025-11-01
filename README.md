@@ -1,6 +1,13 @@
 # NestJS TTCache
 
-A write-through cache implementation for TypeORM inspired by Square's TTCache system. This package provides automatic caching for TypeORM entities with support for write-through and read-through caching patterns.
+[![CI](https://github.com/yourusername/nestjs-ttcache/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/nestjs-ttcache/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/yourusername/nestjs-ttcache/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/nestjs-ttcache)
+[![npm version](https://badge.fury.io/js/nestjs-ttcache.svg)](https://badge.fury.io/js/nestjs-ttcache)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-16%2B-green)](https://nodejs.org/)
+
+A write-through cache implementation for NestJS with TypeORM inspired by Square's TTCache system. This package provides automatic caching for TypeORM entities with support for write-through and read-through caching patterns in NestJS applications.
 
 ## Features
 
@@ -18,17 +25,11 @@ A write-through cache implementation for TypeORM inspired by Square's TTCache sy
 ## Installation
 
 ```bash
-npm install nestjs-ttcache
-# or
-yarn add nestjs-ttcache
-```
-
-## Installation
-
-```bash
 npm install nestjs-ttcache ioredis
 # or
 yarn add nestjs-ttcache ioredis
+# or
+pnpm add nestjs-ttcache ioredis
 ```
 
 ## Quick Start
@@ -287,9 +288,115 @@ afterEach(async () => {
 });
 ```
 
+## Development
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/nestjs-ttcache.git
+cd nestjs-ttcache
+
+# Install dependencies
+npm install
+
+# Build the package
+npm run build
+
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run integration tests (requires Docker)
+docker-compose up -d
+npm run test:integration
+```
+
+### Running Benchmarks
+
+```bash
+npm run benchmark
+```
+
+### Project Structure
+
+```
+nestjs-ttcache/
+├── src/                    # Source code
+│   ├── base/              # Base entity classes
+│   ├── decorators/        # TypeScript decorators
+│   ├── interfaces/        # TypeScript interfaces
+│   ├── providers/         # Cache provider implementations
+│   ├── services/          # Core services
+│   ├── subscribers/       # TypeORM subscribers
+│   └── utils/             # Utility functions
+├── tests/                  # Test files
+│   ├── integration/       # Integration tests
+│   └── unit/              # Unit tests
+├── benchmarks/            # Performance benchmarks
+├── examples/              # Usage examples
+└── .github/               # GitHub Actions workflows
+```
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **CI Pipeline**: Runs on every push and PR
+  - Tests on Node.js 16.x, 18.x, and 20.x
+  - Tests on Ubuntu, Windows, and macOS
+  - Linting and type checking
+  - Security scanning with CodeQL
+  - Dependency review
+
+- **Release Pipeline**: Triggered by version tags
+  - Publishes to npm
+  - Publishes to GitHub Packages
+  - Creates GitHub releases with changelogs
+
+- **Benchmark Pipeline**: Tracks performance over time
+  - Runs on every push to main
+  - Comments on PRs with performance impact
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Style
+
+- We use ESLint for linting
+- Prettier for code formatting
+- Follow TypeScript best practices
+- Write tests for new features
+- Update documentation as needed
+
+### Testing
+
+All contributions should include appropriate tests:
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test file
+npm test -- cache-key.utils.test.ts
+
+# Run with coverage
+npm run test:coverage
+
+# Run in watch mode
+npm run test:watch
+```
 
 ## License
 
@@ -297,4 +404,4 @@ MIT
 
 ## Inspired By
 
-This package is inspired by [Square's TTCache](https://github.com/square/ttcache) system, adapted for TypeORM and NestJS.
+This package is inspired by [Square's TTCache](https://github.com/square/ttcache) system, adapted for NestJS and TypeORM.

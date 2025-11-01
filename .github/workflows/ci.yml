@@ -1,0 +1,239 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test on Node ${{ matrix.node-version }} and ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linter
+      run: npm run lint --if-present
+
+    - name: Build package
+      run: npm run build
+
+    - name: Run tests
+      run: npm test
+      env:
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+
+    - name: Upload coverage reports
+      if: matrix.node-version == '20.x' && matrix.os == 'ubuntu-latest'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  build:
+    name: Build and Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build package
+      run: npm run build
+
+    - name: Check TypeScript types
+      run: npx tsc --noEmit
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: dist/
+        retention-days: 7
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run integration tests
+      run: npm run test:integration --if-present
+      env:
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
+        DATABASE_USER: test
+        DATABASE_PASSWORD: test
+        DATABASE_NAME: testdb
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+
+  package-test:
+    name: Package Installation Test
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Build package
+      run: |
+        npm ci
+        npm run build
+        npm pack
+
+    - name: Test package installation
+      run: |
+        mkdir test-install
+        cd test-install
+        npm init -y
+        npm install ../typeorm-ttcache-*.tgz
+        npm install typeorm @nestjs/common @nestjs/core reflect-metadata
+        
+        # Create a simple test file
+        cat > test.js << 'EOF'
+        const { TTCacheCore, MemoryCacheProvider, CacheKeyGenerator } = require('typeorm-ttcache');
+        
+        // Test that the package exports work
+        const provider = new MemoryCacheProvider();
+        const cache = new TTCacheCore(provider, { defaultTTL: 60 });
+        
+        console.log('✅ Package imports work correctly');
+        console.log('✅ TTCacheCore instantiated');
+        console.log('✅ MemoryCacheProvider instantiated');
+        
+        // Test basic functionality
+        (async () => {
+          await cache.set('test-key', { value: 'test' });
+          const result = await cache.get('test-key');
+          if (result && result.value === 'test') {
+            console.log('✅ Basic cache operations work');
+          } else {
+            console.error('❌ Cache operations failed');
+            process.exit(1);
+          }
+          
+          // Test key generation
+          const key = CacheKeyGenerator.buildKey('entity', 'id', 123);
+          if (key === 'entity:id:123') {
+            console.log('✅ Key generation works');
+          } else {
+            console.error('❌ Key generation failed');
+            process.exit(1);
+          }
+        })();
+        EOF
+        
+        node test.js
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run npm audit
+      run: npm audit --audit-level=moderate
+      continue-on-error: true
+
+    - name: Run Snyk security scan
+      uses: snyk/actions/node@master
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
