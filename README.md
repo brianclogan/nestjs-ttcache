@@ -1,4 +1,4 @@
-# TypeORM TTCache
+# NestJS TTCache
 
 A write-through cache implementation for TypeORM inspired by Square's TTCache system. This package provides automatic caching for TypeORM entities with support for write-through and read-through caching patterns.
 
