@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, DataSource } from 'typeorm';
-import { CachedBaseEntity, CacheableEntity, TTCacheService, MemoryCacheProvider, extendQueryBuilder } from '../../src';
+import { CachedBaseEntity, CacheableEntity, TTCacheService, MemoryCacheProvider, extendQueryBuilder, setGlobalCacheService } from '../../src';
 import { Cache } from 'cache-manager';
 import 'reflect-metadata';
 
@@ -110,6 +110,9 @@ describe('QueryBuilder Cache Extensions', () => {
 
     // Set cache service on base entity
     CachedBaseEntity.setCacheService(cacheService);
+    
+    // Set global cache service for QueryBuilder extensions
+    setGlobalCacheService(cacheService);
   });
 
   afterAll(async () => {
@@ -143,7 +146,7 @@ describe('QueryBuilder Cache Extensions', () => {
 
       // Query with cache
       const qb = repo.createQueryBuilder('product');
-      const [foundProducts, count] = await (qb as any).getManyAndCountWithCache(cacheService);
+      const [foundProducts, count] = await (qb as any).getManyAndCountWithCache();
 
       expect(foundProducts).toHaveLength(3);
       expect(count).toBe(3);
@@ -170,14 +173,14 @@ describe('QueryBuilder Cache Extensions', () => {
 
       // First call - cache miss
       const qb1 = repo.createQueryBuilder('product');
-      const [products1, count1] = await (qb1 as any).getManyAndCountWithCache(cacheService);
+      const [products1, count1] = await (qb1 as any).getManyAndCountWithCache();
       expect(products1).toHaveLength(2);
       expect(count1).toBe(2);
 
       // Second call should hit cache
       const statsBefore = cacheService.getStatistics();
       const qb2 = repo.createQueryBuilder('product');
-      const [products2, count2] = await (qb2 as any).getManyAndCountWithCache(cacheService);
+      const [products2, count2] = await (qb2 as any).getManyAndCountWithCache();
       const statsAfter = cacheService.getStatistics();
 
       expect(products2).toHaveLength(2);
@@ -200,7 +203,7 @@ describe('QueryBuilder Cache Extensions', () => {
       // Query with where condition
       const qb = repo.createQueryBuilder('product')
         .where('product.inStock = :inStock', { inStock: true });
-      const [foundProducts, count] = await (qb as any).getManyAndCountWithCache(cacheService);
+      const [foundProducts, count] = await (qb as any).getManyAndCountWithCache();
 
       expect(foundProducts).toHaveLength(3);
       expect(count).toBe(3);
@@ -223,7 +226,7 @@ describe('QueryBuilder Cache Extensions', () => {
       const qb = repo.createQueryBuilder('product')
         .orderBy('product.price', 'DESC')
         .limit(2);
-      const [foundProducts, count] = await (qb as any).getManyAndCountWithCache(cacheService);
+      const [foundProducts, count] = await (qb as any).getManyAndCountWithCache();
 
       expect(foundProducts).toHaveLength(2);
       expect(count).toBe(5); // Total count should still be 5
@@ -236,7 +239,7 @@ describe('QueryBuilder Cache Extensions', () => {
       // Query with no results
       const qb = repo.createQueryBuilder('product')
         .where('product.inStock = :inStock', { inStock: true });
-      const [foundProducts, count] = await (qb as any).getManyAndCountWithCache(cacheService);
+      const [foundProducts, count] = await (qb as any).getManyAndCountWithCache();
 
       expect(foundProducts).toHaveLength(0);
       expect(count).toBe(0);
@@ -258,7 +261,7 @@ describe('QueryBuilder Cache Extensions', () => {
 
       // Query with cache
       const qb = repo.createQueryBuilder('product');
-      const foundProducts = await (qb as any).getManyWithCache(cacheService);
+      const foundProducts = await (qb as any).getManyWithCache();
 
       expect(foundProducts).toHaveLength(3);
       expect(foundProducts[0]).toMatchObject({
@@ -284,13 +287,13 @@ describe('QueryBuilder Cache Extensions', () => {
 
       // First call
       const qb1 = repo.createQueryBuilder('product');
-      const products1 = await (qb1 as any).getManyWithCache(cacheService);
+      const products1 = await (qb1 as any).getManyWithCache();
       expect(products1).toHaveLength(2);
 
       // Second call should hit cache
       const statsBefore = cacheService.getStatistics();
       const qb2 = repo.createQueryBuilder('product');
-      const products2 = await (qb2 as any).getManyWithCache(cacheService);
+      const products2 = await (qb2 as any).getManyWithCache();
       const statsAfter = cacheService.getStatistics();
 
       expect(products2).toHaveLength(2);
@@ -312,7 +315,7 @@ describe('QueryBuilder Cache Extensions', () => {
       // Query with cache
       const qb = repo.createQueryBuilder('product')
         .where('product.id = :id', { id: saved.id });
-      const found = await (qb as any).getOneWithCache(cacheService);
+      const found = await (qb as any).getOneWithCache();
 
       expect(found).toBeDefined();
       expect(found?.name).toBe('Test Product');
@@ -334,14 +337,14 @@ describe('QueryBuilder Cache Extensions', () => {
       // First call
       const qb1 = repo.createQueryBuilder('product')
         .where('product.id = :id', { id: saved.id });
-      const found1 = await (qb1 as any).getOneWithCache(cacheService);
+      const found1 = await (qb1 as any).getOneWithCache();
       expect(found1?.name).toBe('Test Product');
 
       // Second call should hit cache
       const statsBefore = cacheService.getStatistics();
       const qb2 = repo.createQueryBuilder('product')
         .where('product.id = :id', { id: saved.id });
-      const found2 = await (qb2 as any).getOneWithCache(cacheService);
+      const found2 = await (qb2 as any).getOneWithCache();
       const statsAfter = cacheService.getStatistics();
 
       expect(found2?.name).toBe('Test Product');
@@ -354,7 +357,7 @@ describe('QueryBuilder Cache Extensions', () => {
       // Query with no results
       const qb = repo.createQueryBuilder('product')
         .where('product.id = :id', { id: 999 });
-      const found = await (qb as any).getOneWithCache(cacheService);
+      const found = await (qb as any).getOneWithCache();
 
       expect(found).toBeNull();
     });
@@ -375,7 +378,7 @@ describe('QueryBuilder Cache Extensions', () => {
 
       // Query count with cache
       const qb = repo.createQueryBuilder('product');
-      const count = await (qb as any).getCountWithCache(cacheService);
+      const count = await (qb as any).getCountWithCache();
 
       expect(count).toBe(3);
     });
@@ -397,13 +400,13 @@ describe('QueryBuilder Cache Extensions', () => {
 
       // First call
       const qb1 = repo.createQueryBuilder('product');
-      const count1 = await (qb1 as any).getCountWithCache(cacheService);
+      const count1 = await (qb1 as any).getCountWithCache();
       expect(count1).toBe(2);
 
       // Second call should hit cache
       const statsBefore = cacheService.getStatistics();
       const qb2 = repo.createQueryBuilder('product');
-      const count2 = await (qb2 as any).getCountWithCache(cacheService);
+      const count2 = await (qb2 as any).getCountWithCache();
       const statsAfter = cacheService.getStatistics();
 
       expect(count2).toBe(2);
@@ -425,7 +428,7 @@ describe('QueryBuilder Cache Extensions', () => {
       // Query count with where condition
       const qb = repo.createQueryBuilder('product')
         .where('product.inStock = :inStock', { inStock: true });
-      const count = await (qb as any).getCountWithCache(cacheService);
+      const count = await (qb as any).getCountWithCache();
 
       expect(count).toBe(3);
     });
