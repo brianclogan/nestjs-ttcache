@@ -7,6 +7,7 @@ import { CacheSubscriber } from './subscribers/cache.subscriber';
 import { TTCacheModuleOptions } from './interfaces';
 import { CachedBaseEntity } from './base/cached-base.entity';
 import { getCacheableEntities, getPreloadOptions } from './decorators';
+import { extendQueryBuilder } from './extensions/query-builder.extension';
 
 @Global()
 @Module({})
@@ -134,6 +135,9 @@ export class TTCacheModule implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     // Set cache service on base entity
     CachedBaseEntity.setCacheService(this.cacheService);
+    
+    // Initialize QueryBuilder extensions
+    extendQueryBuilder();
     
     // Register subscriber with TypeORM
     if (this.dataSource && this.dataSource.isInitialized) {
