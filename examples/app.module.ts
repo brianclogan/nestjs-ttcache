@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import Redis from 'ioredis';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-ioredis-yet';
 import { TTCacheModule } from '../src';
-import { RedisCacheProvider } from '../src';
 import { User, Role } from './user.entity';
 import { UserService } from './user.service';
 
@@ -20,19 +20,28 @@ import { UserService } from './user.service';
       synchronize: true, // Don't use in production
     }),
     
-    // TTCache configuration
+    // NestJS Cache Module configuration (shared with TTCache)
+    // cache-manager v6 configuration
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => ({
+        store: await redisStore({
+          host: 'localhost',
+          port: 6379,
+          ttl: 3600 * 1000, // 1 hour in milliseconds (cache-manager v6 uses ms)
+        }),
+      }),
+    }),
+    
+    // TTCache configuration (uses the NestJS Cache Module)
     TTCacheModule.forRoot({
-      provider: new RedisCacheProvider(new Redis({
-        host: 'localhost',
-        port: 6379,
-        // password: 'your_redis_password',
-      })),
+      // No need to specify provider - uses NestJS Cache Manager
       defaultTTL: 3600, // 1 hour default
       debug: true, // Enable debug logging
       enableStatistics: true,
       writeThrough: true,
       readThrough: true,
-      keyPrefix: 'myapp',
+      keyPrefix: 'ttcache:myapp', // Prefix to avoid collisions with other cache usage
       warmOnStartup: true,
       staleWhileRevalidate: true,
       staleTTL: 300, // 5 minutes

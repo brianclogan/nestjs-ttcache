@@ -1,13 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { ObjectLiteral, Repository, SelectQueryBuilder } from 'typeorm';
-import { CacheProvider, TTCacheModuleOptions, CacheStatistics } from '../interfaces';
-import { CacheKeyGenerator } from '../utils';
-import { CacheLock } from '../utils';
+import { TTCacheModuleOptions, CacheStatistics } from '../interfaces';
+import { CacheProvider } from '../interfaces/cache-provider.interface';
+import { CacheManagerAdapter } from '../providers/cache-manager.adapter';
+import { CacheKeyGenerator } from '../utils/cache-key.utils';
+import { CacheLock } from '../utils/cache-lock.utils';
 import { getCacheOptions, isCacheable } from '../decorators';
 
 @Injectable()
 export class TTCacheService {
   private readonly logger = new Logger(TTCacheService.name);
+  private readonly provider: CacheProvider;
   private readonly lock: CacheLock;
   private readonly statistics: CacheStatistics = {
     hits: 0,
@@ -27,10 +32,21 @@ export class TTCacheService {
   private circuitBreakerResetTimer?: NodeJS.Timeout;
   
   constructor(
-    private readonly provider: CacheProvider,
-    private readonly options: TTCacheModuleOptions
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    @Optional() @Inject('TTCACHE_OPTIONS') private readonly options: TTCacheModuleOptions = {}
   ) {
-    this.lock = new CacheLock(provider);
+    // Use provided cache or wrap the NestJS cache manager
+    const cache = this.options.cache || this.cacheManager;
+    this.provider = new CacheManagerAdapter(cache);
+    this.lock = new CacheLock(this.provider);
+    
+    // Set default options
+    this.options = {
+      defaultTTL: 3600,
+      writeThrough: true,
+      readThrough: true,
+      ...this.options
+    };
   }
   
   /**
@@ -349,6 +365,13 @@ export class TTCacheService {
     if (this.options.debug) {
       this.logger.debug('Cache FLUSH: All keys cleared');
     }
+  }
+  
+  /**
+   * Get the underlying cache manager instance
+   */
+  getCacheManager(): Cache {
+    return this.options.cache || this.cacheManager;
   }
   
   private getFullKey(key: string): string {
