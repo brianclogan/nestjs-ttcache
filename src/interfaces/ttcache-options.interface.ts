@@ -1,4 +1,5 @@
 import { Cache } from 'cache-manager';
+import { LogLevel } from '@nestjs/common';
 
 export interface TTCacheModuleOptions {
   /**
@@ -15,6 +16,12 @@ export interface TTCacheModuleOptions {
    * Enable debug logging
    */
   debug?: boolean;
+  
+  /**
+   * Log level for TTCache operations (default: 'log')
+   * Options: 'log', 'error', 'warn', 'debug', 'verbose'
+   */
+  logLevel?: LogLevel;
   
   /**
    * Enable cache statistics tracking

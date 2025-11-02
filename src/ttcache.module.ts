@@ -1,4 +1,4 @@
-import { Module, DynamicModule, Global, OnModuleInit, Inject, Optional } from '@nestjs/common';
+import { Module, DynamicModule, Global, OnModuleInit, Inject, Optional, Logger } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { CacheModule } from '@nestjs/cache-manager';
 import { DataSource } from 'typeorm';
@@ -13,6 +13,7 @@ import { extendQueryBuilder, setGlobalCacheService } from './extensions/query-bu
 @Module({})
 export class TTCacheModule implements OnModuleInit {
   private static options: TTCacheModuleOptions = {};
+  private readonly logger = new Logger(TTCacheModule.name);
   
   constructor(
     private readonly moduleRef: ModuleRef,
@@ -133,34 +134,42 @@ export class TTCacheModule implements OnModuleInit {
   }
   
   async onModuleInit(): Promise<void> {
+    this.logger.log('TTCacheModule initializing');
+    
     // Set cache service on base entity
     CachedBaseEntity.setCacheService(this.cacheService);
+    this.logger.debug('Cache service set on CachedBaseEntity');
     
     // Initialize QueryBuilder extensions and set global cache service
     extendQueryBuilder();
     setGlobalCacheService(this.cacheService);
+    this.logger.debug('QueryBuilder extensions initialized');
     
     // Register subscriber with TypeORM
     if (this.dataSource && this.dataSource.isInitialized) {
       try {
         const subscriber = this.moduleRef.get(CacheSubscriber);
         this.dataSource.subscribers.push(subscriber);
+        this.logger.log('Cache subscriber registered with TypeORM');
       } catch (error) {
-        console.warn('Could not register cache subscriber:', error);
+        this.logger.warn(`Could not register cache subscriber: ${error}`);
       }
     } else {
-      console.warn('DataSource not available or not initialized. Cache subscriber not registered.');
+      this.logger.warn('DataSource not available or not initialized. Cache subscriber not registered.');
     }
     
     // Warm cache if enabled
     if (TTCacheModule.options.warmOnStartup) {
+      this.logger.log('Starting cache warming');
       await this.warmCache();
     }
+    
+    this.logger.log('TTCacheModule initialized successfully');
   }
   
   private async warmCache(): Promise<void> {
     if (!this.dataSource || !this.dataSource.isInitialized) {
-      console.warn('DataSource not available for cache warming');
+      this.logger.warn('DataSource not available for cache warming');
       return;
     }
     
@@ -182,10 +191,10 @@ export class TTCacheModule implements OnModuleInit {
           
           if (entities.length > 0) {
             await this.cacheService.warmCache(entities, options.ttl);
-            console.log(`Warmed cache with ${entities.length} ${entityName} entities`);
+            this.logger.log(`Warmed cache with ${entities.length} ${entityName} entities`);
           }
         } catch (error) {
-          console.error(`Failed to warm cache for ${entityName}:`, error);
+          this.logger.error(`Failed to warm cache for ${entityName}: ${error}`);
         }
       }
     }
