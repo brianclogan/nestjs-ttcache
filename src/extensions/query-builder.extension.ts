@@ -7,40 +7,50 @@ import { CacheKeyGenerator } from '../utils';
  * This module extends TypeORM's SelectQueryBuilder with cache-aware methods
  */
 
+// Global cache service instance set during module initialization
+let globalCacheService: TTCacheService | null = null;
+
+/**
+ * Set the global cache service for QueryBuilder extensions
+ * This is called automatically by TTCacheModule.onModuleInit()
+ */
+export function setGlobalCacheService(cacheService: TTCacheService): void {
+  globalCacheService = cacheService;
+}
+
+/**
+ * Get the global cache service
+ */
+export function getGlobalCacheService(): TTCacheService | null {
+  return globalCacheService;
+}
+
 declare module 'typeorm' {
   interface SelectQueryBuilder<Entity> {
     /**
      * Get many results and count with cache support
      * Returns both entities and total count in a single cached operation
+     * Uses the globally configured cache service
      */
-    getManyAndCountWithCache(
-      cacheService: TTCacheService,
-      ttl?: number
-    ): Promise<[Entity[], number]>;
+    getManyAndCountWithCache(ttl?: number): Promise<[Entity[], number]>;
 
     /**
      * Get many results with cache support
+     * Uses the globally configured cache service
      */
-    getManyWithCache(
-      cacheService: TTCacheService,
-      ttl?: number
-    ): Promise<Entity[]>;
+    getManyWithCache(ttl?: number): Promise<Entity[]>;
 
     /**
      * Get one result with cache support
+     * Uses the globally configured cache service
      */
-    getOneWithCache(
-      cacheService: TTCacheService,
-      ttl?: number
-    ): Promise<Entity | null>;
+    getOneWithCache(ttl?: number): Promise<Entity | null>;
 
     /**
      * Get count with cache support
+     * Uses the globally configured cache service
      */
-    getCountWithCache(
-      cacheService: TTCacheService,
-      ttl?: number
-    ): Promise<number>;
+    getCountWithCache(ttl?: number): Promise<number>;
   }
 }
 
@@ -50,9 +60,15 @@ declare module 'typeorm' {
 export function extendQueryBuilder(): void {
   (SelectQueryBuilder.prototype as any).getManyAndCountWithCache = async function<Entity extends ObjectLiteral>(
     this: SelectQueryBuilder<Entity>,
-    cacheService: TTCacheService,
     ttl?: number
   ): Promise<[Entity[], number]> {
+    const cacheService = getGlobalCacheService();
+    if (!cacheService) {
+      throw new Error(
+        'Cache service not initialized. Make sure TTCacheModule is imported in your application.'
+      );
+    }
+
     const cacheKey = CacheKeyGenerator.forQuery(this);
     const countCacheKey = CacheKeyGenerator.buildKey(cacheKey, 'count');
 
@@ -78,9 +94,15 @@ export function extendQueryBuilder(): void {
 
   (SelectQueryBuilder.prototype as any).getManyWithCache = async function<Entity extends ObjectLiteral>(
     this: SelectQueryBuilder<Entity>,
-    cacheService: TTCacheService,
     ttl?: number
   ): Promise<Entity[]> {
+    const cacheService = getGlobalCacheService();
+    if (!cacheService) {
+      throw new Error(
+        'Cache service not initialized. Make sure TTCacheModule is imported in your application.'
+      );
+    }
+
     const cacheKey = CacheKeyGenerator.forQuery(this);
 
     return await cacheService.readThrough(
@@ -92,9 +114,15 @@ export function extendQueryBuilder(): void {
 
   (SelectQueryBuilder.prototype as any).getOneWithCache = async function<Entity extends ObjectLiteral>(
     this: SelectQueryBuilder<Entity>,
-    cacheService: TTCacheService,
     ttl?: number
   ): Promise<Entity | null> {
+    const cacheService = getGlobalCacheService();
+    if (!cacheService) {
+      throw new Error(
+        'Cache service not initialized. Make sure TTCacheModule is imported in your application.'
+      );
+    }
+
     const cacheKey = CacheKeyGenerator.forQuery(this);
 
     return await cacheService.readThrough(
@@ -106,9 +134,15 @@ export function extendQueryBuilder(): void {
 
   (SelectQueryBuilder.prototype as any).getCountWithCache = async function<Entity extends ObjectLiteral>(
     this: SelectQueryBuilder<Entity>,
-    cacheService: TTCacheService,
     ttl?: number
   ): Promise<number> {
+    const cacheService = getGlobalCacheService();
+    if (!cacheService) {
+      throw new Error(
+        'Cache service not initialized. Make sure TTCacheModule is imported in your application.'
+      );
+    }
+
     const cacheKey = CacheKeyGenerator.buildKey(CacheKeyGenerator.forQuery(this), 'count');
 
     const cached = await cacheService.get<number>(cacheKey);
