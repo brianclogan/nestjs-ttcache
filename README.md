@@ -198,6 +198,7 @@ The `CachedBaseEntity` provides these cache-aware methods:
 - `deleteWithCache(criteria)` - Delete with cache invalidation
 - `invalidateCache()` - Invalidate all caches for entity type
 - `warmCache(entities)` - Pre-warm cache with entities
+- `createCachedQueryBuilder(alias?)` - Create a query builder with cache-enabled methods
 
 ## Advanced Usage
 
@@ -251,7 +252,38 @@ This method is particularly useful for pagination scenarios where you need both 
 
 You can use cache-aware methods directly on TypeORM's QueryBuilder. The extensions are automatically initialized when TTCacheModule is loaded, so no additional setup is required. The cache service is automatically injected, so you don't need to pass it manually.
 
-Use the cache methods on your query builders:
+There are two ways to use cached query builders:
+
+**Option 1: Using the entity's helper method (Recommended)**
+
+```typescript
+// Get many results with cache
+const users = await User.createCachedQueryBuilder()
+  .where('user.isActive = :active', { active: true })
+  .getManyWithCache();
+
+// Get one result with cache
+const user = await User.createCachedQueryBuilder()
+  .where('user.id = :id', { id: 1 })
+  .getOneWithCache();
+
+// Get count with cache
+const count = await User.createCachedQueryBuilder()
+  .where('user.isActive = :active', { active: true })
+  .getCountWithCache();
+
+// Get many results and count with cache (useful for pagination)
+const [users, totalCount] = await User.createCachedQueryBuilder()
+  .where('user.isActive = :active', { active: true })
+  .orderBy('user.createdAt', 'DESC')
+  .skip(0)
+  .take(10)
+  .getManyAndCountWithCache();
+
+console.log(`Found ${users.length} users out of ${totalCount} total`);
+```
+
+**Option 2: Using the repository directly**
 
 ```typescript
 // Get many results with cache
