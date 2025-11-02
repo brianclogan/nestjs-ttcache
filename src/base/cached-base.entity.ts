@@ -328,7 +328,7 @@ export abstract class CachedBaseEntity extends BaseEntity {
   }
   
   /**
-   * Warm cache with entitiesn
+   * Warm cache with entities
    */
   static async warmCache<T extends CachedBaseEntity>(
     this: (new() => T) & typeof CachedBaseEntity,
@@ -338,5 +338,22 @@ export abstract class CachedBaseEntity extends BaseEntity {
     if (cacheService) {
       await cacheService.warmCache(entities as ObjectLiteral[]);
     }
+  }
+  
+  /**
+   * Create a query builder with cache support
+   * Returns a SelectQueryBuilder with cache-enabled methods
+   * 
+   * @example
+   * const users = await User.createCachedQueryBuilder()
+   *   .where('user.isActive = :active', { active: true })
+   *   .getManyWithCache();
+   */
+  static createCachedQueryBuilder<T extends CachedBaseEntity>(
+    this: (new() => T) & typeof CachedBaseEntity,
+    alias?: string
+  ): any {
+    const repository = (this as any).getRepository() as Repository<T>;
+    return repository.createQueryBuilder(alias || this.name.toLowerCase());
   }
 }
