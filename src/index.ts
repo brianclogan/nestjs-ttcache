@@ -3,6 +3,7 @@ export * from './ttcache.module';
 
 // Services
 export * from './services/ttcache.service';
+export { CacheManagerAdapter } from './providers/cache-manager.adapter';
 
 // Decorators
 export * from './decorators';

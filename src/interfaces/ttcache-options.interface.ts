@@ -1,10 +1,10 @@
-import { CacheProvider } from './cache-provider.interface';
+import { Cache } from 'cache-manager';
 
 export interface TTCacheModuleOptions {
   /**
-   * Cache provider instance (Redis, Memory, etc.)
+   * Optional custom cache instance. If not provided, will use NestJS's CACHE_MANAGER
    */
-  provider: CacheProvider;
+  cache?: Cache;
   
   /**
    * Global TTL in seconds (default: 3600)
@@ -74,6 +74,15 @@ export interface TTCacheModuleOptions {
     threshold: number;
     timeout: number;
     resetTimeout: number;
+  };
+  
+  /**
+   * Optional logger instance
+   */
+  logger?: {
+    debug: (msg: string) => void;
+    warn: (msg: string) => void;
+    log: (msg: string) => void;
   };
 }
 

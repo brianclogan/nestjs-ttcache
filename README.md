@@ -25,11 +25,16 @@ A write-through cache implementation for NestJS with TypeORM inspired by Square'
 ## Installation
 
 ```bash
-npm install nestjs-ttcache ioredis
+npm install nestjs-ttcache
 # or
-yarn add nestjs-ttcache ioredis
+yarn add nestjs-ttcache
 # or
-pnpm add nestjs-ttcache ioredis
+pnpm add nestjs-ttcache
+
+# Optional: Install a cache store (if not using default memory store)
+npm install cache-manager-ioredis-yet
+# or
+npm install @keyv/redis
 ```
 
 ## Quick Start
@@ -39,8 +44,9 @@ pnpm add nestjs-ttcache ioredis
 ```typescript
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import Redis from 'ioredis';
-import { TTCacheModule, RedisCacheProvider } from 'nestjs-ttcache';
+import { CacheModule } from '@nestjs/cache-manager';
+import { TTCacheModule } from 'nestjs-ttcache';
+import * as redisStore from 'cache-manager-ioredis-yet';
 
 @Module({
   imports: [
@@ -48,13 +54,43 @@ import { TTCacheModule, RedisCacheProvider } from 'nestjs-ttcache';
       // Your TypeORM configuration
     }),
     
+    // Option 1: Use with NestJS Cache Module (Recommended)
+    CacheModule.register({
+      store: redisStore,
+      host: 'localhost',
+      port: 6379,
+      ttl: 3600, // seconds
+      isGlobal: true,
+    }),
+    
     TTCacheModule.forRoot({
-      provider: new RedisCacheProvider(new Redis()),
+      // TTCache will automatically use the NestJS Cache Manager
       defaultTTL: 3600,
       writeThrough: true,
       readThrough: true,
       stampedeProtection: true,
-      enableStatistics: true
+      enableStatistics: true,
+      keyPrefix: 'ttcache'
+    })
+  ]
+})
+export class AppModule {}
+```
+
+Or use the default in-memory cache:
+
+```typescript
+@Module({
+  imports: [
+    TypeOrmModule.forRoot({
+      // Your TypeORM configuration
+    }),
+    
+    // TTCache will automatically configure NestJS Cache Module with memory store
+    TTCacheModule.forRoot({
+      defaultTTL: 3600,
+      writeThrough: true,
+      readThrough: true
     })
   ]
 })
@@ -231,28 +267,81 @@ console.log(`Average load time: ${stats.averageLoadTime}ms`);
 | `invalidateRelations` | boolean | true | Auto-invalidate relation caches |
 | `circuitBreaker` | object | undefined | Circuit breaker configuration |
 
-## Cache Providers
+## Cache Integration
 
-### Redis Provider
+NestJS TTCache integrates seamlessly with the NestJS Cache Module, allowing you to:
+- **Reuse existing cache configuration** - No duplicate Redis connections
+- **Share cache storage** - Use the same cache store for all caching needs
+- **Leverage NestJS patterns** - Consistent with NestJS best practices
+
+### Using with Redis
 
 ```typescript
-import Redis from 'ioredis';
-import { RedisCacheProvider } from 'nestjs-ttcache';
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-ioredis-yet';
 
-const redis = new Redis({
-  host: 'localhost',
-  port: 6379
-});
-
-const provider = new RedisCacheProvider(redis);
+@Module({
+  imports: [
+    CacheModule.register({
+      store: redisStore,
+      host: 'localhost',
+      port: 6379,
+      ttl: 3600,
+      isGlobal: true,
+    }),
+    TTCacheModule.forRoot({
+      keyPrefix: 'ttcache' // Prefix to avoid key collisions
+    })
+  ]
+})
 ```
 
-### Memory Provider (for testing)
+### Using with Custom Cache Instance
 
 ```typescript
-import { MemoryCacheProvider } from 'nestjs-ttcache';
+import { Cache } from 'cache-manager';
+import { caching } from 'cache-manager';
 
-const provider = new MemoryCacheProvider();
+// Create a custom cache instance
+const customCache = await caching('memory', {
+  max: 100,
+  ttl: 10 * 1000 // 10 seconds
+});
+
+@Module({
+  imports: [
+    TTCacheModule.forRoot({
+      cache: customCache, // Use custom cache instance
+      defaultTTL: 3600
+    })
+  ]
+})
+```
+
+### Using Different Caches for Different Modules
+
+```typescript
+// App Module - Global cache configuration
+@Module({
+  imports: [
+    CacheModule.register({ isGlobal: true }),
+    TTCacheModule.forRoot({
+      keyPrefix: 'global'
+    })
+  ]
+})
+export class AppModule {}
+
+// Feature Module - Custom cache configuration
+@Module({
+  imports: [
+    TTCacheModule.forFeature({
+      keyPrefix: 'feature',
+      defaultTTL: 300 // 5 minutes for this module
+    })
+  ]
+})
+export class FeatureModule {}
 ```
 
 ## Best Practices
