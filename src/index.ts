@@ -22,3 +22,6 @@ export * from './utils';
 
 // Subscribers
 export * from './subscribers/cache.subscriber';
+
+// Extensions
+export * from './extensions/query-builder.extension';

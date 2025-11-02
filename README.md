@@ -247,6 +247,51 @@ console.log(`Found ${users.length} users out of ${totalCount} total`);
 
 This method is particularly useful for pagination scenarios where you need both the paginated results and the total count. Both the entities and count are cached separately, allowing for efficient cache hits even when pagination parameters change.
 
+### QueryBuilder with Cache
+
+You can use cache-aware methods directly on TypeORM's QueryBuilder. The extensions are automatically initialized when TTCacheModule is loaded, so no additional setup is required.
+
+Use the cache methods on your query builders:
+
+```typescript
+// Get many results with cache
+const users = await userRepository
+  .createQueryBuilder('user')
+  .where('user.isActive = :active', { active: true })
+  .getManyWithCache(cacheService);
+
+// Get one result with cache
+const user = await userRepository
+  .createQueryBuilder('user')
+  .where('user.id = :id', { id: 1 })
+  .getOneWithCache(cacheService);
+
+// Get count with cache
+const count = await userRepository
+  .createQueryBuilder('user')
+  .where('user.isActive = :active', { active: true })
+  .getCountWithCache(cacheService);
+
+// Get many results and count with cache (useful for pagination)
+const [users, totalCount] = await userRepository
+  .createQueryBuilder('user')
+  .where('user.isActive = :active', { active: true })
+  .orderBy('user.createdAt', 'DESC')
+  .skip(0)
+  .take(10)
+  .getManyAndCountWithCache(cacheService);
+
+console.log(`Found ${users.length} users out of ${totalCount} total`);
+```
+
+All QueryBuilder cache methods support an optional TTL parameter:
+
+```typescript
+const [users, count] = await userRepository
+  .createQueryBuilder('user')
+  .getManyAndCountWithCache(cacheService, 1800); // 30 minutes TTL
+```
+
 ### Cache Warming
 
 ```typescript
