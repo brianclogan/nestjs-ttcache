@@ -207,6 +207,50 @@ export abstract class CachedBaseEntity extends BaseEntity {
   }
   
   /**
+   * Find and count with cache support
+   * Returns both entities and total count in a single operation
+   */
+  static async findAndCountWithCache<T extends CachedBaseEntity>(
+    this: (new() => T) & typeof CachedBaseEntity,
+    options?: FindManyOptions<T>
+  ): Promise<[T[], number]> {
+    const cacheService = CachedBaseEntity.getCacheService();
+    const repository = (this as any).getRepository() as Repository<T>;
+    
+    // Create a dummy instance for checking cacheability
+    const dummyInstance = Object.create(this.prototype);
+    
+    if (!cacheService || !isCacheable(dummyInstance)) {
+      return await repository.findAndCount(options);
+    }
+    
+    const cacheOptions = getCacheOptions(dummyInstance);
+    
+    // Generate separate cache keys for entities and count
+    const entitiesCacheKey = CacheKeyGenerator.forFind(this.name, options || {});
+    const countCacheKey = CacheKeyGenerator.forCount(this.name, options);
+    
+    // Try to get both from cache
+    const cachedEntities = await cacheService.get<T[]>(entitiesCacheKey);
+    const cachedCount = await cacheService.get<number>(countCacheKey);
+    
+    if (cachedEntities !== null && cachedCount !== null) {
+      return [cachedEntities, cachedCount];
+    }
+    
+    // If either is missing, fetch both from database
+    const [entities, count] = await repository.findAndCount(options);
+    
+    // Cache both results
+    await Promise.all([
+      cacheService.set(entitiesCacheKey, entities, cacheOptions?.ttl),
+      cacheService.set(countCacheKey, count, cacheOptions?.ttl)
+    ]);
+    
+    return [entities, count];
+  }
+  
+  /**
    * Create and save entity with cache support
    */
   static async createAndSave<T extends CachedBaseEntity>(
@@ -284,7 +328,7 @@ export abstract class CachedBaseEntity extends BaseEntity {
   }
   
   /**
-   * Warm cache with entities
+   * Warm cache with entitiesn
    */
   static async warmCache<T extends CachedBaseEntity>(
     this: (new() => T) & typeof CachedBaseEntity,

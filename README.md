@@ -192,6 +192,7 @@ The `CachedBaseEntity` provides these cache-aware methods:
 - `findByIdWithCache(id)` - Find entity by ID with cache
 - `findWithCache(options)` - Find multiple entities with cache
 - `countWithCache(options)` - Count entities with cache
+- `findAndCountWithCache(options)` - Find entities and get total count with cache
 - `createAndSave(data)` - Create and save entity with cache
 - `updateWithCache(criteria, data)` - Update with cache invalidation
 - `deleteWithCache(criteria)` - Delete with cache invalidation
@@ -230,6 +231,21 @@ const queryBuilder = userRepository
 
 const users = await cacheService.cacheQuery(queryBuilder, 1800);
 ```
+
+### Find and Count with Cache
+
+```typescript
+// Get paginated results with total count in a single cached operation
+const [users, totalCount] = await User.findAndCountWithCache({
+  skip: 0,
+  take: 10,
+  order: { createdAt: 'DESC' }
+});
+
+console.log(`Found ${users.length} users out of ${totalCount} total`);
+```
+
+This method is particularly useful for pagination scenarios where you need both the paginated results and the total count. Both the entities and count are cached separately, allowing for efficient cache hits even when pagination parameters change.
 
 ### Cache Warming
 
