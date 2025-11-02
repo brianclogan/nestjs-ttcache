@@ -342,6 +342,48 @@ console.log(`Cache hit rate: ${stats.hitRate * 100}%`);
 console.log(`Average load time: ${stats.averageLoadTime}ms`);
 ```
 
+### Logging and Debugging
+
+TTCache provides comprehensive logging at multiple levels to help you debug cache operations in production:
+
+```typescript
+TTCacheModule.forRoot({
+  defaultTTL: 3600,
+  // Set log level: 'log' (default), 'debug', 'verbose', 'warn', 'error'
+  logLevel: 'debug',
+  // Enable debug mode for additional cache operation details
+  debug: true
+})
+```
+
+**Log Levels:**
+- `'log'` (default) - Basic operational logs (initialization, cache warming)
+- `'debug'` - Detailed cache operations (hits, misses, sets, deletes)
+- `'verbose'` - Very detailed information for deep debugging
+- `'warn'` - Warning messages (circuit breaker, missing datasource)
+- `'error'` - Error messages only
+
+**Example logs:**
+```
+[Nest] 12345 - 11/02/2025, 11:19:05 AM LOG [TTCacheService] TTCacheService initialized with logLevel: debug
+[Nest] 12345 - 11/02/2025, 11:19:05 AM LOG [TTCacheModule] Cache subscriber registered with TypeORM
+[Nest] 12345 - 11/02/2025, 11:19:05 AM LOG [TTCacheModule] Warmed cache with 50 User entities
+[Nest] 12345 - 11/02/2025, 11:19:06 AM DEBUG [TTCacheService] Cache HIT: ttcache:User:find:abc123def456
+[Nest] 12345 - 11/02/2025, 11:19:07 AM DEBUG [TTCacheService] Cache SET: ttcache:User:id:1 (TTL: 3600s)
+```
+
+**Verbose logging example (with cache service details):**
+```
+[Nest] 12345 - 11/02/2025, 11:19:05 AM LOG [TTCacheService] TTCacheService initialized with logLevel: verbose
+[Nest] 12345 - 11/02/2025, 11:19:05 AM VERBOSE [TTCacheService] Cache Service: Redis | Version: 6.0.0 | Store: cache-manager-redis
+[Nest] 12345 - 11/02/2025, 11:19:05 AM LOG [TTCacheModule] Cache subscriber registered with TypeORM
+```
+
+When using verbose logging, TTCache will automatically detect and log:
+- **Cache Service Type**: Redis, Memory, Memcached, MongoDB, or custom store
+- **Version**: The version of the cache-manager package being used
+- **Store**: The specific cache store implementation
+
 ## Configuration Options
 
 | Option | Type | Default | Description |
@@ -349,6 +391,7 @@ console.log(`Average load time: ${stats.averageLoadTime}ms`);
 | `provider` | CacheProvider | Required | Cache provider instance (Redis/Memory) |
 | `defaultTTL` | number | 3600 | Default TTL in seconds |
 | `debug` | boolean | false | Enable debug logging |
+| `logLevel` | LogLevel | 'log' | Log level for TTCache operations ('log', 'error', 'warn', 'debug', 'verbose') |
 | `enableStatistics` | boolean | false | Track cache statistics |
 | `writeThrough` | boolean | true | Enable write-through caching |
 | `readThrough` | boolean | true | Enable read-through caching |

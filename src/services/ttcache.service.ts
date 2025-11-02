@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, Optional } from '@nestjs/common';
+import { Injectable, Inject, Logger, Optional, LogLevel } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ObjectLiteral, Repository, SelectQueryBuilder } from 'typeorm';
@@ -30,6 +30,7 @@ export class TTCacheService {
   private circuitBreakerOpen = false;
   private circuitBreakerErrors = 0;
   private circuitBreakerResetTimer?: NodeJS.Timeout;
+  private logLevel: LogLevel = 'log';
   
   constructor(
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
@@ -45,8 +46,130 @@ export class TTCacheService {
       defaultTTL: 3600,
       writeThrough: true,
       readThrough: true,
+      logLevel: 'log',
       ...this.options
     };
+    
+    this.logLevel = this.options.logLevel || 'log';
+    this.log(`TTCacheService initialized with logLevel: ${this.logLevel}`);
+    
+    // Log cache service details at verbose level
+    this.logCacheServiceDetails(cache);
+  }
+  
+  /**
+   * Log detailed information about the cache service being used
+   */
+  private logCacheServiceDetails(cache: Cache): void {
+    if (this.logLevel !== 'verbose') {
+      return;
+    }
+    
+    try {
+      const cacheInfo = this.detectCacheService(cache);
+      this.logger.verbose(
+        `Cache Service: ${cacheInfo.type} | Version: ${cacheInfo.version} | Store: ${cacheInfo.store}`,
+        TTCacheService.name
+      );
+    } catch (error) {
+      this.logger.verbose(
+        `Cache Service: Unknown | Error detecting cache details: ${error}`,
+        TTCacheService.name
+      );
+    }
+  }
+  
+  /**
+   * Detect the cache service type and version
+   */
+  private detectCacheService(cache: Cache): { type: string; version: string; store: string } {
+    let type = 'Unknown';
+    let version = 'Unknown';
+    let store = 'Unknown';
+    
+    try {
+      // Check for cache-manager instance
+      if (cache && typeof cache === 'object') {
+        // Try to detect from stores
+        if ((cache as any).stores && Array.isArray((cache as any).stores)) {
+          const stores = (cache as any).stores;
+          if (stores.length > 0) {
+            const firstStore = stores[0] as any;
+            
+            // Detect store type
+            if (firstStore.constructor) {
+              const storeName = firstStore.constructor.name;
+              
+              if (storeName.includes('Redis')) {
+                type = 'Redis';
+                store = 'cache-manager-redis';
+              } else if (storeName.includes('Memory') || storeName.includes('Keyv')) {
+                type = 'Memory';
+                store = 'cache-manager-memory';
+              } else if (storeName.includes('Memcached')) {
+                type = 'Memcached';
+                store = 'cache-manager-memcached';
+              } else if (storeName.includes('MongoDB')) {
+                type = 'MongoDB';
+                store = 'cache-manager-mongodb';
+              } else {
+                type = storeName;
+                store = storeName;
+              }
+            }
+            
+            // Try to get version from store
+            if (firstStore.client) {
+              const client = firstStore.client as any;
+              if (client.info) {
+                version = 'Connected';
+              } else if (client.version) {
+                version = client.version;
+              }
+            }
+          }
+        }
+        
+        // Try to get cache-manager version from package
+        try {
+          const packageJson = require('cache-manager/package.json');
+          if (packageJson.version) {
+            version = packageJson.version;
+          }
+        } catch {
+          // Ignore if package.json not found
+        }
+      }
+    } catch (error) {
+      // Silently fail and return defaults
+    }
+    
+    return { type, version, store };
+  }
+  
+  /**
+   * Log message at the configured log level
+   */
+  private log(message: string, context?: string): void {
+    const ctx = context || TTCacheService.name;
+    switch (this.logLevel) {
+      case 'verbose':
+        this.logger.verbose(message, ctx);
+        break;
+      case 'debug':
+        this.logger.debug(message, ctx);
+        break;
+      case 'warn':
+        this.logger.warn(message, ctx);
+        break;
+      case 'error':
+        this.logger.error(message, ctx);
+        break;
+      case 'log':
+      default:
+        this.logger.log(message, ctx);
+        break;
+    }
   }
   
   /**
